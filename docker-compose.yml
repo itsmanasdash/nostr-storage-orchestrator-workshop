@@ -122,7 +122,7 @@ services:
       # firewall so the published-port path (docker-proxy on the bridge)
       # reaches the gateway's netns listener.
       - "127.0.0.1:${PG_GATEWAY_PORT:-55432}:5432"
-      - "172.17.0.1:${PG_GATEWAY_PORT:-55432}:5432"
+      # - "172.17.0.1:${PG_GATEWAY_PORT:-55432}:5432"
       - "${NVPN_LISTEN_PORT:-51820}:${NVPN_LISTEN_PORT:-51820}/udp"
 
   admin:

@@ -1,6 +1,13 @@
 {
   "name": "orchestrator",
   "private": true,
+  "scripts": {
+    "setup:service": "./scripts/register-service-identity.sh",
+    "grant:storage": "./scripts/grant-storage.sh",
+    "list:providers": "./scripts/list-providers.sh",
+    "remove:provider": "./scripts/remove-provider.sh",
+    "prune:providers": "./scripts/prune-stale-providers.sh"
+  },
   "workspaces": [
     "proxy/blossom",
     "packages/*"
