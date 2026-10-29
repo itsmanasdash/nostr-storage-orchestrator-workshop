@@ -72,9 +72,14 @@ export function xhrUpload(
     const xhr = new XMLHttpRequest();
     xhr.upload.onprogress = (e: ProgressEvent) => {
       if (e.lengthComputable) {
-        onProgress(Math.round((e.loaded / e.total) * 100));
+        // Cap at 99 — reserve 100 for the server acknowledgement so the bar
+        // does not jump to 100% before the response arrives (the proxy may
+        // still be writing to storage nodes after receiving all bytes).
+        onProgress(Math.min(Math.round((e.loaded / e.total) * 100), 99));
       }
     };
+    // All bytes delivered to the proxy; waiting for the server response.
+    xhr.upload.onloadend = () => onProgress(99);
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         try {

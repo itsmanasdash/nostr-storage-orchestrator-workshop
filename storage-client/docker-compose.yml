@@ -122,3 +122,8 @@ services:
 
 volumes:
   nvpn_data:
+
+networks:
+  default:
+    name: nostr-storage-orchestrator-workshop_default
+    external: true

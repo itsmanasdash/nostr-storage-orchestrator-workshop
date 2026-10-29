@@ -226,7 +226,16 @@ storage machines. The normal path is self-service after an admin grants membersh
 cp .env.example .env
 # Set ADMIN_PUBLIC_URL and an initial ADMIN_ALLOWED_PUBKEYS bootstrap npub.
 docker compose --profile full up -d --build
+./scripts/register-service-identity.sh
 ```
+
+The identity script registers the proxy/notifier's database credentials and
+recreates those containers to load them from `.env`. If you already ran an
+older version that only restarted them, apply the saved identity with
+`docker compose --profile full up -d --no-deps --force-recreate blossom notifier`.
+A `/health` response with providers only confirms roster discovery; upload
+authorization also needs these credentials, and the provider must be reachable
+over the mesh.
 
 Open `admin-app`, unlock the bootstrap-admin profile, and authorize the client's operator npub.
 The environment seed is ignored after the Member table contains its first row.
@@ -274,6 +283,30 @@ CI, or to confirm a new machine is capable of running this at all:
 > The two `*-e2e.sh` scripts are **test harnesses, not setup tools**. They wipe both `nvpn_data`
 > volumes; `control-plane-e2e.sh` also wipes the Compose Postgres volume. Never run either against
 > a real deployment.
+
+When both stacks run on the same Mac, a Wi-Fi subnet of `172.17.0.0/16`
+overlaps Docker's default bridge. The client may fail to reach the host's LAN
+address even though both sidecars are healthy. For this local setup, set
+`NVPN_ENDPOINT=host.docker.internal:51820` in the **host's** `.env` before
+starting it and generating invites, so new clients inherit a reachable endpoint.
+For an already joined client, update its host-peer endpoint (use the host
+sidecar's npub and its published UDP port):
+
+```bash
+cd storage-client
+docker compose exec -T nvpn nvpn set --config /data/config/nvpn/config.toml \
+  --fips-peer-endpoint '<host-npub>=host.docker.internal:51820'
+```
+
+This saves the endpoint in the client's NVPN state and reloads the daemon.
+It is specific to running both stacks on the same Mac; a client on another
+machine needs a host address reachable from that machine. Check the peer's
+`reachable` and `last_handshake_at` fields before relying on the provider count.
+
+Joining is a one-time step. Use `docker compose --profile agent up -d --build`
+for subsequent client starts and preserve its `nvpn_data` volume. Rejoining
+with a new identity leaves existing blob records pointing at the old storage
+npub, even when the files still exist in `data/blossom/blobs`.
 
 ## Setup
 

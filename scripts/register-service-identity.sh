@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Generates a new service identity (nsec + npub), saves it to .env,
-# registers the npub with db-api, and restarts dependent containers.
+# registers the npub with db-api, and recreates dependent containers.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -47,10 +47,12 @@ rm -f .env.bak
 echo "==> Registering npub with db-api..."
 docker compose exec -T db node packages/db/dist/src/scripts/registerService.js "${SERVICE_NPUB}" "$@"
 
-echo "==> Restarting blossom and notifier..."
-docker compose restart blossom notifier
+echo "==> Recreating blossom and notifier to load the service identity..."
+# env_file is read when containers are created; restart keeps the old
+# environment and leaves db-api requests unsigned (401, surfaced as 500).
+docker compose up -d --no-deps --force-recreate blossom notifier
 
 echo ""
 echo "Successfully set up service identity!"
 echo "SERVICE_NPUB: ${SERVICE_NPUB}"
-echo "SERVICE_NSEC: ${SERVICE_NSEC}"
+echo "SERVICE_NSEC saved to .env (not printed)."

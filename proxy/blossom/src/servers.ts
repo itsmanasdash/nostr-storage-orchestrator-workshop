@@ -15,6 +15,7 @@ export type ServerCandidate = { id: string; url: string };
 // liveness latency is not a per-deployment concern.
 const POLL_MS = 15_000;
 const TIME_SLOT_MS = 3_600_000;
+const PROVIDER_READY_TIMEOUT_MS = 3_000;
 const RAW_URL = /^(?:https?|wss?):\/\//i;
 
 function hostForUrl(host: string): string {
@@ -137,6 +138,15 @@ export async function uploadBlob(
     const server = selectOwner(npub, remaining, now)!;
     remaining.splice(remaining.indexOf(server), 1);
     try {
+      // A recent heartbeat can outlive a disconnected/replaced mesh node.
+      // Bound this small request, including connection setup, before sending
+      // the buffered blob. Keep the longer upload timeout for large files.
+      await axios.get(`${server.url}/health`, {
+        timeout: PROVIDER_READY_TIMEOUT_MS,
+        signal: AbortSignal.timeout(PROVIDER_READY_TIMEOUT_MS),
+        maxRedirects: 0,
+        maxContentLength: 4096,
+      });
       await axios.put(`${server.url}/upload`, blob, {
         headers: {
           Authorization: authHeader,
